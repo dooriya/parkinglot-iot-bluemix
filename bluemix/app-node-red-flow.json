@@ -1,0 +1,122 @@
+[
+  {
+    "id": "89fcd99d.aa6c68",
+    "type": "ibmiot in",
+    "z": "c9eeb829.1734c8",
+    "authentication": "apiKey",
+    "apiKey": "",
+    "inputType": "evt",
+    "deviceId": "",
+    "applicationId": "",
+    "deviceType": "+",
+    "eventType": "+",
+    "commandType": "",
+    "format": "json",
+    "name": "IBM IoT",
+    "service": "registered",
+    "allDevices": true,
+    "allApplications": "",
+    "allDeviceTypes": true,
+    "allEvents": false,
+    "allCommands": "",
+    "allFormats": "",
+    "qos": 0,
+    "x": 266.765625,
+    "y": 361.75,
+    "wires": [
+      [
+        "22ea9dae.d4d162"
+      ]
+    ]
+  },
+  {
+    "id": "dbef142a.b0b8c8",
+    "type": "ibmiot out",
+    "z": "c9eeb829.1734c8",
+    "authentication": "apiKey",
+    "apiKey": "",
+    "outputType": "cmd",
+    "deviceId": "myraspberry",
+    "deviceType": "raspberrypi3",
+    "eventCommandType": "Notification",
+    "format": "json",
+    "data": "occ",
+    "qos": 0,
+    "name": "IBM IoT",
+    "service": "registered",
+    "x": 1063.765625,
+    "y": 355.75,
+    "wires": []
+  },
+  {
+    "id": "73171d3b.2b9f84",
+    "type": "switch",
+    "z": "c9eeb829.1734c8",
+    "name": "",
+    "property": "send",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "true"
+      }
+    ],
+    "checkall": "true",
+    "outputs": 1,
+    "x": 799.265625,
+    "y": 358.75,
+    "wires": [
+      [
+        "dbef142a.b0b8c8"
+      ]
+    ]
+  },
+  {
+    "id": "608bd9b9.bfc8e8",
+    "type": "function",
+    "z": "c9eeb829.1734c8",
+    "name": "initalization",
+    "func": "var global = context.global;\n\nglobal.set(\"datas\", []);\nglobal.set(\"filters\", []);\nglobal.set(\"datap\", 0);\nglobal.set(\"filterp\", 0);\nglobal.set(\"baseline\", null);\nglobal.set(\"occ\", false);\nglobal.set(\"cnt\", 0);\nfor (i = 0; i < 10; ++i) {\n   var t = {x : 0, y : 0, z : 0};\n   global.datas[i] = t;\n}\nfor (i = 0; i < 30; ++i) {\n    var t = {x : 0, y : 0, z : 0};\n    global.filters[i] = t;\n}\n\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 593.765625,
+    "y": 545.75,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "accc9c94.259d",
+    "type": "inject",
+    "z": "c9eeb829.1734c8",
+    "name": "",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "x": 305.765625,
+    "y": 546.75,
+    "wires": [
+      [
+        "608bd9b9.bfc8e8"
+      ]
+    ]
+  },
+  {
+    "id": "22ea9dae.d4d162",
+    "type": "function",
+    "z": "c9eeb829.1734c8",
+    "name": "calculation",
+    "func": "var global = context.global;\n\nconst BASELINE_DRIFT = 10;\nconst FORGETTING_Factor = 0.95;\n\nconst ident = (c) => {\n    return Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z);\n};\nconst minus = (a, b) => {\n    return {\n        \"x\" : a.x - b.x,\n        \"y\" : a.y - b.y,\n        \"z\" : a.z - b.z\n    };\n};\nconst add = (a, b) => {\n    return {\n        \"x\" : a.x + b.x,\n        \"y\" : a.y + b.y,\n        \"z\" : a.z + b.z\n    };\n};\nconst multi = (a, b) => {\n    return {\n        \"x\" : a.x * b,\n        \"y\" : a.y * b,\n        \"z\" : a.z * b\n    };\n};\n\n// record new data in queue\nglobal.datas[global.datap] = msg.payload.d;\nglobal.datap = global.datap + 1;\nif (global.datap == global.datas.length) global.datap = 0;\n\n// calculate new filter\nvar datas = [];\nvar sumData = {x : 0, y : 0, z : 0};\nfor (i = 0; i < global.datas.length; i++) {\n    if (ident(global.datas[i]) === 0) continue;\n    datas[datas.length] = global.datas[i];\n    sumData = add(sumData, datas[datas.length - 1]);\n}\nif (datas.length < global.datas.length) {\n    msg.send = 0;\n    return msg;\n}\n\n// record new filter in queue\nvar lastFilter =  multi(sumData, 1.0 / datas.length);\nglobal.filters[global.filterp] = lastFilter;\nglobal.filterp = global.filterp + 1;\nif (global.filterp == global.filters.length) global.filterp = 0;\n\n// calculate variance of Filters\nvar filters = [];\nvar sumFilter =  {x : 0, y : 0, z : 0}, s = 0;\nfor (i = 0; i < global.filters.length; i++) {\n    if (ident(global.filters[i]) === 0) continue;\n    filters[filters.length] = global.filters[i];\n    sumFilter = add(sumFilter, filters[filters.length - 1]);\n}\nif(filters.length < global.filters.length){\n    msg.send = 0;\n    return msg;\n}\nvar meanFilter = multi(sumFilter, 1.0 / filters.length);\nfor (i = 0; i < filters.length; ++i) {\n    s += ident(minus(filters[i], meanFilter));\n}\nvar varianceofFilter = Math.sqrt(s) / filters.length;\nif (varianceofFilter > 10) {\n    msg.send = 0;\n    return msg;\n}\n\n// calculate difference between baseline and lastFilter\nif (!global.baseline) {\n    global.baseline = lastFilter;\n}\nvar diffLen = ident(minus(global.baseline, lastFilter));\n\n// calculate occupy and send command when status changed or every two seconds.\nmsg.send = (diffLen > BASELINE_DRIFT) != global.occ;\nglobal.cnt++;\nif(global.cnt > 20){\n    global.cnt = 0;\n    msg.send = true;\n}\nglobal.occ = diffLen > BASELINE_DRIFT;\n\n// update environment baseline if it is not occupied\nif (!global.occ) {\n    global.baseline = add(multi(lastFilter, 1 - FORGETTING_Factor), multi(global.baseline, FORGETTING_Factor));\n}\n\nmsg.payload = {\n    \"diffLen\" : diffLen,\n    \"occ\" : global.occ\n};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 499.765625,
+    "y": 360.75,
+    "wires": [
+      [
+        "73171d3b.2b9f84"
+      ]
+    ]
+  }
+]
