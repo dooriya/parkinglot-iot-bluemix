@@ -1,0 +1,84 @@
+[
+  {
+    "id": "f62bcfc.80e8a3",
+    "type": "exec",
+    "z": "b7f9a0ce.a74d8",
+    "command": "/usr/bin/sudo node /home/pi/parkinglot/read-sensor-data.js",
+    "addpay": false,
+    "append": "",
+    "useSpawn": "",
+    "timer": "",
+    "name": "GetMagneticData",
+    "x": 442.89581298828125,
+    "y": 268.8888854980469,
+    "wires": [
+      [
+        "3f4339f.8c5b0c6"
+      ],
+      [],
+      []
+    ]
+  },
+  {
+    "id": "824f0f45.91459",
+    "type": "inject",
+    "z": "b7f9a0ce.a74d8",
+    "name": "",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "repeat": "0.1",
+    "crontab": "",
+    "once": true,
+    "x": 228.39581298828125,
+    "y": 267.3888854980469,
+    "wires": [
+      [
+        "f62bcfc.80e8a3"
+      ]
+    ]
+  },
+  {
+    "id": "3f4339f.8c5b0c6",
+    "type": "function",
+    "z": "b7f9a0ce.a74d8",
+    "name": "SetData",
+    "func": "var v = JSON.parse(msg.payload);\nmsg.payload = JSON.parse(msg.payload);\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 719.3957977294922,
+    "y": 255.38888549804688,
+    "wires": [
+      [
+        "deef4d47.588a7"
+      ]
+    ]
+  },
+  {
+    "id": "deef4d47.588a7",
+    "type": "wiotp out",
+    "z": "b7f9a0ce.a74d8",
+    "authType": "d",
+    "qs": "false",
+    "qsDeviceId": "",
+    "deviceKey": "",
+    "deviceType": "",
+    "deviceId": "",
+    "event": "Device Event",
+    "format": "json",
+    "name": "",
+    "x": 1044.3958587646484,
+    "y": 259.3889465332031,
+    "wires": []
+  },
+  {
+    "id": "59fbe903.34c518",
+    "type": "comment",
+    "z": "b7f9a0ce.a74d8",
+    "name": "Get Magnetic data",
+    "info": "",
+    "x": 239.8958282470703,
+    "y": 186.88888549804688,
+    "wires": []
+  }
+]
